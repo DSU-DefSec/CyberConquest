@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trafic Light</title>
+    <link rel="icon"
+          href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAK5JREFUOE+tk7ENAjEMRZ9hCLaA6hromIMBQNAwCQ0IepiDDhoqtuCGOIx8upysCIm7BHf2j18cxxYiUyiALTAHRo1cAldgJ/DwKeIdhSOwjKGRfxJYhVgLULgB0x/JQb4LzMypARXsB7BuVA3xL7BWe8NhCBtRGAPPDsmB5y+YGOAMLDqWHh+7GODlut2XUxrASkq2vwCyn5DdxLxvzB4kNx3po+wg6cvkIL3W+QM5Djl5GZ2nPwAAAABJRU5ErkJggg=="
+          type="image/png" id="icon">
+    <style>
+        body {
+            background: #004165;
+        }
+
+        .center {
+            position: absolute;
+            left: 50%;
+            margin: 0 auto;
+            transform: translate(-50%, 0);
+            text-align: center;
+            color: #ffffff;
+        }
+
+        .center > * {
+            margin: 0;
+        }
+
+        #main {
+            background: #adafaf;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        form {
+            border: 1px dashed #004165;
+            padding: 10px;
+
+        }
+
+        .trafficLight {
+            margin: auto;
+            background-color: gray;
+            width: 400px;
+            height: 50px;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 5px;
+            border-radius: 10px;
+        }
+
+        .trafficLight span {
+            width: 45px;
+            height: 45px;
+            border-radius: 100%;
+            background-color: gray;
+            /* animation: red 5s linear infinite */
+            /* animation-fill-mode: forwards; */
+        }
+    </style>
+</head>
+<body>
+<div class="center" id="main">
+    <h1>Official traffic Light Control software</h1>
+    <p>Plz dont break</p>
+    <form id='led-form'>
+        <label for="id">ID:</label>
+        <input type="range" name="id" id="id" min="0" max="7" oninput="this.nextElementSibling.value = this.value;">
+        <output></output>
+        <br><br>
+        <label for="red">Red:</label>
+        <input type="range" id="red" name="red" min="0" max="255" oninput="this.nextElementSibling.value = this.value;led_form();">
+        <output></output>
+        <br><br>
+        <label for="green">Green:</label>
+        <input type="range" id="green" name="green" min="0" max="255" oninput="this.nextElementSibling.value = this.value;led_form();">
+        <output></output>
+        <br><br>
+        <label for="blue">Blue:</label>
+        <input type="range" id="blue" name="blue" min="0" max="255" oninput="this.nextElementSibling.value = this.value;led_form();">
+        <output></output>
+        <br><br>
+        <label for="white">White:</label>
+        <input type="range" id="white" name="blue" min="0" max="255" oninput="this.nextElementSibling.value = this.value;led_form();">
+        <output></output>
+        <br><br>
+        <button type="submit">Submit</button>
+    </form>
+    <br>
+    <div class="trafficLight" id="lights">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+    <br>
+    <form id='code-form'>
+        <label for="code">Code:</label><br>
+        <textarea id="code" cols=50 rows=10>{{ currentInstruction }}</textarea><br>
+        <br>
+        <button onclick="prettyPrint()" type="submit">Submit Code</button>
+    </form>
+    <br>
+    <form id='brightness-form'>
+        <label for="brightness">Brightness:</label><br>
+        <input type="range" id="brightness" name="brightness" min="0" max="100" oninput="this.nextElementSibling.value = this.value">
+        <output></output>
+        <br><br>
+        <button type="submit">Submit Brightness</button>
+    </form>
+
+</div>
+<script>
+
+    const socket = new WebSocket('ws://' + location.host + '/sock');
+    socket.addEventListener('message', ev => {
+        const msg = JSON.parse(ev.data)["leds"];
+        const childDivs = document.getElementById("lights").children;
+        for (let i = 0; i < childDivs.length; i++) {
+            const childDiv = childDivs[i];
+            childDiv.style.background = "rgb(" + msg[i][0] + ", " + msg[i][1] + ", " + msg[i][2] + ")";
+        }
+    });
+    socket.addEventListener('close', (event) => {
+        location.reload();
+    });
+
+    function led_form(ev) {
+        if (ev != null) ev.preventDefault();
+        const id = document.getElementById('id');
+        const red = document.getElementById('red');
+        const green = document.getElementById('green');
+        const blue = document.getElementById('blue');
+        const white = document.getElementById('white');
+        socket.send(JSON.stringify({"id": id.value, "r": red.value, "g": green.value, "b": blue.value, "w": white.value}));
+    }
+
+    document.getElementById('led-form').onsubmit = led_form;
+
+    document.getElementById('code-form').onsubmit = ev => {
+        ev.preventDefault();
+        try {
+            socket.send(JSON.stringify({"code": JSON.parse(document.getElementById("code").value)}));
+        } catch (err) {
+            window.alert("ERROR WRONG BAD YOU DID A NO NO!! WEE-WOO THE POLICE ARE COMMING FOR YOU AND THEY WILL ARREST YOU FOR THE BAD THING YOU JUST DID");
+        }
+    };
+    document.getElementById('brightness-form').onsubmit = ev => {
+        ev.preventDefault();
+        socket.send(JSON.stringify({"brightness": document.getElementById("brightness").value}));
+    };
+
+    function prettyPrint() {
+        const ugly = document.getElementById('code').value;
+        const obj = JSON.parse(ugly);
+        document.getElementById('code').value = JSON.stringify(obj, undefined, 2);
+    }
+
+    function iconChange() {
+        setTimeout(function () {
+            document.getElementById("icon").href = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAALJJREFUOE+tkzEOwjAMRZ/bQ3ALmFhg4xwcAEQXTtKlCHY4BxssTNyCHqI1CmoiK0KibfBm//jFcWwhMlXmwB5YAZNOroErUIrwsCliHVWOwCaGRv5JhK2PBYAqN2DxI9nLdxGWzvkAmoYqy9h1qvr4F1jQ2pZDnlOIKlPg2SPZ8+wFMwc4A+uepcfHLg7wMt0eyqkdwJU02v4CSH5CchPTvjF5kMJ0pIyygYxfJgMZtM5vHZRLcZ5YAtYAAAAASUVORK5CYII=";
+        }, 1000);
+        setTimeout(function () {
+            document.getElementById("icon").href = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAK1JREFUOE+tk7ERwjAMRZ9gCLaAKg10zMEAcNBkEho46GEOOmio2IIMAeZ0xMhJChKEO+v7P8uyJNRXIANyYAoMSrkATsAa4ZpapOIP7IB5A1oN7BEWMWSAwBkYfzFH+YIw0c0b8GBDj2Wphk+8STPtyZY+KyEwBG4tzBGXXjBSwAGYtUy9fuyogHtS7a6cQgGa0s/rLwD3E9xFdH6ju5GsPRytbBDHMBmk0zi/ACcWOXlwjTsYAAAAAElFTkSuQmCC";
+        }, 2000);
+        setTimeout(function () {
+            document.getElementById("icon").href = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAK5JREFUOE+tk7ENAjEMRZ9hCLaA6hromIMBQNAwCQ0IepiDDhoqtuCGOIx8upysCIm7BHf2j18cxxYiUyiALTAHRo1cAldgJ/DwKeIdhSOwjKGRfxJYhVgLULgB0x/JQb4LzMypARXsB7BuVA3xL7BWe8NhCBtRGAPPDsmB5y+YGOAMLDqWHh+7GODlut2XUxrASkq2vwCyn5DdxLxvzB4kNx3po+wg6cvkIL3W+QM5Djl5GZ2nPwAAAABJRU5ErkJggg==";
+        }, 3000);
+
+    }
+
+    window.onload = () => {
+        iconChange();
+        setInterval(() => {
+            iconChange();
+        }, 3000);
+        setTimeout(prettyPrint, 100);
+    };
+</script>
+</body>
+</html>

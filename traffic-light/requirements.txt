@@ -1,0 +1,12 @@
+# FT232H
+pyftdi
+
+# FT232H
+adafruit-blinka
+
+# Traffic light
+Flask
+flask-sock
+
+# Neopixel for FT232H
+adafruit-circuitpython-neopixel-spi
