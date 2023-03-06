@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-# @Name: traffic_server.py
-# @Project: CyberConquest/
+# @Name: traffic-server.py
+# @Project: CyberConquest/traffic-light
 # @Author: Doodleman360
 # @Created: 2/22/23
 # @Edited by Goofables to be 20% more blinky

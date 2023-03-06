@@ -7,3 +7,5 @@ venv/
 test*
 exclude/
 DCclient/
+
+buzzzt.exe.*
