@@ -1,0 +1,9 @@
+# Python environment
+venv/
+
+# PyCharm
+.idea
+
+test*
+exclude/
+DCclient/
