@@ -1,0 +1,11 @@
+# MCP2221
+hidapi
+
+# FT232H and MCP2221
+adafruit-blinka
+
+# PI hat
+adafruit-circuitpython-motorkit
+
+# PI GPIO
+RPi.GPIO
