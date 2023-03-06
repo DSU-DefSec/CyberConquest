@@ -1,0 +1,28 @@
+# FT232H
+pyftdi
+
+# MCP2221
+hidapi
+
+# FT232H and MCP2221
+adafruit-blinka
+
+# Traffic light
+Flask
+flask-sock
+
+# Neopixel for FT232H
+adafruit-circuitpython-neopixel-spi
+
+# Neopixel for PI
+adafruit-circuitpython-neopixel
+
+# PI hat
+adafruit-circuitpython-motorkit
+
+# PI GPIO
+RPi.GPIO
+
+
+# MCP23008 driver
+adafruit-circuitpython-mcp230xx

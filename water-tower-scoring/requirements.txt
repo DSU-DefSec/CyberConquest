@@ -1,0 +1,26 @@
+
+# MCP23008 driver
+adafruit-circuitpython-mcp230xx
+
+
+# FT232H
+pyftdi
+
+# MCP2221
+hidapi
+
+# FT232H and MCP2221
+adafruit-blinka
+
+# Scoring Server
+Flask
+flask-sock
+
+# Neopixel for FT232H
+adafruit-circuitpython-neopixel-spi
+
+# Neopixel for PI
+adafruit-circuitpython-neopixel
+
+# PI GPIO
+RPi.GPIO
