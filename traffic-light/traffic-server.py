@@ -16,7 +16,7 @@ import neopixel_spi as neopixel
 from flask import Flask, render_template, request
 from flask_sock import Sock
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="templates")
 app.config["SOCK_SERVER_OPTIONS"] = {"ping_interval": 25}
 sock = Sock(app)
 client_list = []
@@ -237,7 +237,7 @@ def parse_data(data: dict):
 @app.route("/")
 def hello_world():
     return render_template(
-        "templates/index.html", currentInstruction=json.dumps(app.light_controller.light_instructions)
+        "index.html", currentInstruction=json.dumps(app.light_controller.light_instructions)
     )
 
 
@@ -263,7 +263,7 @@ def echo(ws):
 if __name__ == "__main__":
     app.send_update_loop_thread = Thread(target=send_update_loop, daemon=True)
 
-    app.light_controller = LightController(50)
+    app.light_controller = LightController(3)
     app.light_controller.set_code(INITIAL_CONTROL_CODE)
     app.light_controller.start_loop()
 
