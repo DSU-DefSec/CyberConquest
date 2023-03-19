@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Traffic Controller Login</title>
+    <link rel="icon"
+          href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAK5JREFUOE+tk7ENAjEMRZ9hCLaA6hromIMBQNAwCQ0IepiDDhoqtuCGOIx8upysCIm7BHf2j18cxxYiUyiALTAHRo1cAldgJ/DwKeIdhSOwjKGRfxJYhVgLULgB0x/JQb4LzMypARXsB7BuVA3xL7BWe8NhCBtRGAPPDsmB5y+YGOAMLDqWHh+7GODlut2XUxrASkq2vwCyn5DdxLxvzB4kNx3po+wg6cvkIL3W+QM5Djl5GZ2nPwAAAABJRU5ErkJggg=="
+          type="image/png" id="icon">
+    <style>
+        body {
+            background: #004165;
+        }
+
+        .center {
+            position: absolute;
+            left: 50%;
+            margin: 10% auto;
+            transform: translate(-50%, 0);
+            text-align: center;
+            color: #ffffff;
+        }
+
+        .center > * {
+            margin: 0;
+        }
+
+        #main {
+            background: #adafaf;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        form {
+            border: 1px dashed #004165;
+            padding: 10px;
+
+        }
+
+    </style>
+</head>
+<body>
+<div class="center" id="main">
+    <h1>Traffic Control Login</h1>
+    <p>Plz dont break</p>
+    <form id="login">
+        <br>
+        <label for="user">Username: </label><input name="user" id="user" title="Username" placeholder="admin">
+        <br>
+        <br>
+        <label for="pass">Password: </label><input name="pass" id="pass" type="Password" title="password" placeholder="Password1!">
+        <br>
+        <span>{{error}}</span>
+        <br>
+        <button type="submit">Submit</button>
+    </form>
+
+</div>
+<script>
+
+
+    function iconChange() {
+        setTimeout(function () {
+            document.getElementById("icon").href = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAALJJREFUOE+tkzEOwjAMRZ/bQ3ALmFhg4xwcAEQXTtKlCHY4BxssTNyCHqI1CmoiK0KibfBm//jFcWwhMlXmwB5YAZNOroErUIrwsCliHVWOwCaGRv5JhK2PBYAqN2DxI9nLdxGWzvkAmoYqy9h1qvr4F1jQ2pZDnlOIKlPg2SPZ8+wFMwc4A+uepcfHLg7wMt0eyqkdwJU02v4CSH5CchPTvjF5kMJ0pIyygYxfJgMZtM5vHZRLcZ5YAtYAAAAASUVORK5CYII=";
+        }, 1000);
+        setTimeout(function () {
+            document.getElementById("icon").href = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAK1JREFUOE+tk7ERwjAMRZ9gCLaAKg10zMEAcNBkEho46GEOOmio2IIMAeZ0xMhJChKEO+v7P8uyJNRXIANyYAoMSrkATsAa4ZpapOIP7IB5A1oN7BEWMWSAwBkYfzFH+YIw0c0b8GBDj2Wphk+8STPtyZY+KyEwBG4tzBGXXjBSwAGYtUy9fuyogHtS7a6cQgGa0s/rLwD3E9xFdH6ju5GsPRytbBDHMBmk0zi/ACcWOXlwjTsYAAAAAElFTkSuQmCC";
+        }, 2000);
+        setTimeout(function () {
+            document.getElementById("icon").href = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAK5JREFUOE+tk7ENAjEMRZ9hCLaA6hromIMBQNAwCQ0IepiDDhoqtuCGOIx8upysCIm7BHf2j18cxxYiUyiALTAHRo1cAldgJ/DwKeIdhSOwjKGRfxJYhVgLULgB0x/JQb4LzMypARXsB7BuVA3xL7BWe8NhCBtRGAPPDsmB5y+YGOAMLDqWHh+7GODlut2XUxrASkq2vwCyn5DdxLxvzB4kNx3po+wg6cvkIL3W+QM5Djl5GZ2nPwAAAABJRU5ErkJggg==";
+        }, 3000);
+
+    }
+
+    window.onload = () => {
+        iconChange();
+        setInterval(() => {
+            iconChange();
+        }, 3000);
+    };
+</script>
+</body>
+</html>

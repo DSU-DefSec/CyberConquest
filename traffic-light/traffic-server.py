@@ -4,7 +4,7 @@
 # @Author: Doodleman360
 # @Created: 2/22/23
 # @Edited by Goofables to be 20% more blinky
-
+import hashlib
 import json
 import os
 import random
@@ -13,12 +13,13 @@ from threading import Thread
 
 import board
 import neopixel_spi as neopixel
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session, redirect
 from flask_sock import Sock
 
 app = Flask(__name__, template_folder="templates")
 app.config["SOCK_SERVER_OPTIONS"] = {"ping_interval": 25}
 sock = Sock(app)
+app.auth_tokens = []
 client_list = []
 
 INITIAL_CONTROL_CODE = [
@@ -236,6 +237,13 @@ def parse_data(data: dict):
 
 @app.route("/")
 def hello_world():
+    if request.args.get("user", None) is not None and request.args.get("user", None) is not None:
+        auth_token = hashlib.md5(f"{request.args.get('user')}:{request.args.get('pass')}".encode()).hexdigest()
+        if auth_token not in app.auth_tokens:
+            return render_template("logon.html", error="No access")
+        return redirect(f"{request.base_url}?auth_token={auth_token}", 301)
+    if request.args.get("auth_token", "") not in app.auth_tokens:
+        return render_template("logon.html")
     return render_template(
         "index.html", currentInstruction=json.dumps(app.light_controller.light_instructions)
     )
