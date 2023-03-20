@@ -1,0 +1,11 @@
+{
+  "name": "node_project",
+  "packageManager": "yarn@3.4.1",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "main": "src/main.js",
+  "scripts": {
+    "dev": "node src/main.js"
+  }
+}
