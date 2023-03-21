@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Tower Control System</title>
+    <style>
+        body {
+            color: black;
+            background: lightblue;
+        }
+    </style>
+</head>
+<body>
+    <h1>Water Tower Control System</h1>
+
+    <table>
+        <tr>
+            <td>Water Sensor status:</td>
+            <td id="sensor-status">Not full</td>
+        </tr>
+        <tr>
+            <td>Pump Status:</td>
+            <td id="pump-status">Off</td>
+        </tr>
+        <tr>
+            <td><button id="disable-control">Disable Automatic Control</button></td>
+            <td><button id="enable-control">Enable Automatic Control</button></td>
+        </tr>
+        <tr>
+            <td><button id="enable-pump">Enable Pump</button></td>
+            <td><button id="disable-pump">Disable Pump</button></td>
+        </tr>
+    </table>
+
+    <script>
+        const sensor_status_label = document.getElementById('sensor-status')
+        const pump_status_label = document.getElementById('pump-status')
+        const disable_control_button = document.getElementById('disable-control')
+        const enable_control_button = document.getElementById('enable-control')
+        const enable_pump_button = document.getElementById('enable-pump')
+        const disable_pump_button = document.getElementById('disable-pump')
+
+        const opt = {method: "GET", cache: "no-store"}
+
+        disable_control_button.addEventListener('click', async () => {
+            await fetch('/api/set_override/true');
+        });
+
+        enable_control_button.addEventListener('click', async () => {
+            await fetch('/api/set_override/false');
+        });
+
+        enable_pump_button.addEventListener('click', async () => {
+            await fetch('/api/set_pump/true');
+        });
+
+        disable_pump_button.addEventListener('click', async () => {
+            await fetch('/api/set_pump/false');
+        });
+
+
+        setInterval(async () => {
+            await fetch('/api/get_sensor_value', opt).then(sensor_value_res => {
+                return sensor_value_res.json()
+            }).then(sensor_value_data => {
+                if(sensor_value_data.sensor_value){
+                    sensor_status_label.innerText = "Full"
+                } else {
+                    sensor_status_label.innerText = "Not Full"
+                }
+            }).catch(() => {
+                sensor_status_label.innerText = "ERROR"
+            });
+
+            await fetch('/api/get_pump_value', opt).then(pump_value_res => {
+                return pump_value_res.json()
+            }).then(pump_value_data => {
+                if(pump_value_data.pump_value){
+                    pump_status_label.innerText = "On"
+                } else {
+                    pump_status_label.innerText = "Off"
+                }
+            }).catch(() => {
+                pump_status_label.innerHTML = "ERROR"
+            });
+        }, 2000);
+
+
+
+    </script>
+</body>
+</html>

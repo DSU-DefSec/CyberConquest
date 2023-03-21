@@ -1,0 +1,34 @@
+
+# Install Chocolatey
+```
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+```
+
+# Install dependencies
+```
+choco install vcredist140 -y
+```
+
+Reboot
+
+```
+choco install python3 -y
+choco install nodejs --version 18.15.0 -y
+```
+
+## Python dependencies
+```
+pip3 install hidapi adafruit-blinka
+```
+
+## Javascript dependencies
+```
+Set-ExecutionPolicy Bypass -Scope Process -Force
+```
+
+```
+corepack enable
+corepack prepare yarn@stable --activate
+```
+
+
