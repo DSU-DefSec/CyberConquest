@@ -356,7 +356,7 @@ if __name__ == "__main__":
     app.send_update_loop_thread = Thread(target=send_update_loop, daemon=True)
     app.undocumented_api_thread = Thread(target=api_loop, daemon=True)
 
-    with open("traffic-light/users.json") as f:
+    with open("users.json") as f:
         for user, pas in json.load(f).items():
             app.auth_tokens.append(hashlib.md5(f"{user}:{pas}".encode()).hexdigest())
     app.light_controller = LightController(8)
