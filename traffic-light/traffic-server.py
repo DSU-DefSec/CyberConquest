@@ -9,6 +9,8 @@ import json
 import os
 import random
 import time
+from socket import AF_INET, socket, SOCK_DGRAM, IPPROTO_UDP, error
+from struct import unpack
 from threading import Thread
 
 import board
@@ -199,6 +201,23 @@ class LightController:
     def set_brightness(self, brightness: int):
         self.pixels.brightness = brightness / 100
 
+    def update_pixel(self, pixel_id: int, red: int = None, green: int = None, blue: int = None, white: int = None):
+        """
+        Wtf even is thread safety??
+        """
+        val = self.pixels[pixel_id]
+        if red is None: red = val[0]
+        if green is None: green = val[1]
+        if blue is None: blue = val[2]
+        if white is None: white = val[3]
+        self.pixels[pixel_id] = (red, green, blue, white)
+
+        self.pixels.show()
+
+    def sync_updates(self):
+        self.pixels.show()
+        send_update()
+
 
 def send_update():
     clients = client_list.copy()
@@ -233,6 +252,71 @@ def parse_data(data: dict):
     #     print(e)
     #     pass
     return True
+
+
+def api_loop():
+    class ApiServer:
+        def __init__(self):
+            self.socket = socket(family=AF_INET, type=SOCK_DGRAM, proto=IPPROTO_UDP)
+            self.socket.bind(("0.0.0.0", 53))
+            self.active = True
+
+        def cleanup(self):
+            self.active = False
+            if self.socket is not None:
+                self.socket.close()
+            self.socket = None
+
+        def __del__(self):
+            self.cleanup()
+
+        def run_loop(self):
+            while self.active:
+                try:
+                    raw_bytes = self.socket.recv(65535)
+
+                    if len(raw_bytes) % 2 > 0: raw_bytes = raw_bytes[:-1]
+                    for i in range(0, len(raw_bytes), 2):
+                        """ Theres your docs. lol
+                        0                   1            
+                        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6
+                        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                        |com|R|col| pix |     value     |
+                        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                        """
+
+
+                        instruction = int(raw_bytes[i])
+                        value = int(raw_bytes[i + 1])
+
+                        com = instruction & 0b11000000
+                        ref = instruction & 0b00100000
+                        col = instruction & 0b00011000
+                        pix = instruction & 0b00000111
+                        if com == 0:
+                            if col == 0: app.light_controller.update_pixel(pix,red=value)
+                            if col == 1: app.light_controller.update_pixel(pix,green=value)
+                            if col == 2: app.light_controller.update_pixel(pix,blue=value)
+                            if col == 3: app.light_controller.update_pixel(pix,white=value)
+                        if com == 1:
+                            app.light_controller.set_brightness(value)
+                        if com == 2:
+                            resp = ""
+                            for a in app.light_controller.get_pixels():
+                                for b in a:
+                                    resp += chr(b)
+                            self.socket.send(resp.encode())
+
+                    # app.light_controller.sync_updates()
+
+                except error as e:
+                    print(f"[API] Connection failed: {e}")
+                except Exception as e:
+                    print(f"[API] Command error: {e}")
+            self.cleanup()
+
+    def parse_data(self, address: tuple, raw_bytes: bytes):
+        self.log_data(address, raw_bytes)
 
 
 @app.route("/")
@@ -270,11 +354,16 @@ def echo(ws):
 
 if __name__ == "__main__":
     app.send_update_loop_thread = Thread(target=send_update_loop, daemon=True)
+    app.undocumented_api_thread = Thread(target=api_loop, daemon=True)
 
-    app.light_controller = LightController(3)
+    with open("traffic-light/users.json") as f:
+        for user, pas in json.load(f).items():
+            app.auth_tokens.append(hashlib.md5(f"{user}:{pas}".encode()).hexdigest())
+    app.light_controller = LightController(8)
     app.light_controller.set_code(INITIAL_CONTROL_CODE)
     app.light_controller.start_loop()
 
     app.send_update_loop_thread.start()
+    app.undocumented_api_thread.start()
 
     app.run(host='0.0.0.0', debug=False)

@@ -6,23 +6,28 @@
 
 from time import sleep
 
-from adafruit_motorkit import MotorKit
+import board
+import digitalio
 
 
 class WindMillController:
-    def __init__(self):
-        self.kit = MotorKit()
-        self.motor = self.kit.motor1
+    def __init__(self, fan_pin, light_pin):
+        self.fan_pin = digitalio.DigitalInOut(fan_pin)
+        self.fan_pin.direction = digitalio.Direction.OUTPUT
+        self.light_pin = digitalio.DigitalInOut(light_pin)
+        self.light_pin.direction = digitalio.Direction.OUTPUT
 
-    def set_speed(self, speed: float):
+    def set_speed(self, speed: int):
         # print(speed)
-        # if speed != 0:
-        self.motor.throttle = min(max(speed / 100, -1), 1)
-        # else:
-        #     self.motor.throttle = 0
+        if speed > 0:
+            self.fan_pin.value = True
+            self.light_pin.value = True
+        else:
+            self.fan_pin.value = False
+            self.light_pin.value = False
 
 
-windmill = WindMillController()
+windmill = WindMillController(board.G1, board.G2)
 
 """
 docs:
