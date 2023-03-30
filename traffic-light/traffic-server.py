@@ -10,12 +10,11 @@ import os
 import random
 import time
 from socket import AF_INET, socket, SOCK_DGRAM, IPPROTO_UDP, error
-from struct import unpack
 from threading import Thread
 
 import board
 import neopixel_spi as neopixel
-from flask import Flask, render_template, request, session, redirect
+from flask import Flask, render_template, request, redirect
 from flask_sock import Sock
 
 app = Flask(__name__, template_folder="templates")
@@ -29,25 +28,46 @@ INITIAL_CONTROL_CODE = [
         "set:0,255,0,0",
         "wait:40",
         "set:0,0,0,0",
-        "wait:40",
+        "wait:20",
+        "wait:0",
+        "wait:5",
+
         "wait:0",
         "wait:40",
+        "wait:0",
+        "wait:20",
+        "wait:0",
+        "wait:5",
     ],
     [
         "wait:0",
         "wait:40",
         "set:255,255,0,0",
-        "wait:40",
+        "wait:20",
         "set:0,0,0,0",
+        "wait:5",
+
+        "wait:0",
         "wait:40",
+        "wait:0",
+        "wait:20",
+        "wait:0",
+        "wait:5",
     ],
     [
         "set:0,0,0,0",
         "wait:40",
         "wait:0",
-        "wait:40",
+        "wait:20",
         "set:255,0,0,0",
+        "wait:5",
+
+        "wait:0",
         "wait:40",
+        "wait:0",
+        "wait:20",
+        "wait:0",
+        "wait:5",
     ],
     [
         # "set:0,0,0,0",
@@ -92,32 +112,148 @@ INITIAL_CONTROL_CODE = [
         "set:0,255,0,0",
         "wait:40",
         "set:0,0,0,0",
-        "wait:40",
+        "wait:20",
+        "wait:0",
+        "wait:5",
+
         "wait:0",
         "wait:40",
+        "wait:0",
+        "wait:20",
+        "wait:0",
+        "wait:5",
     ],
     [
         "wait:0",
         "wait:40",
         "set:255,255,0,0",
-        "wait:40",
+        "wait:20",
         "set:0,0,0,0",
+        "wait:5",
+
+        "wait:0",
         "wait:40",
+        "wait:0",
+        "wait:20",
+        "wait:0",
+        "wait:5",
     ],
     [
         "set:0,0,0,0",
         "wait:40",
         "wait:0",
-        "wait:40",
+        "wait:20",
         "set:255,0,0,0",
+        "wait:5",
+
+        "wait:0",
         "wait:40",
-    ]
+        "wait:0",
+        "wait:20",
+        "wait:0",
+        "wait:5",
+    ],
+    # side2
+    [
+        "wait:0",
+        "wait:40",
+        "wait:0",
+        "wait:20",
+        "wait:0",
+        "wait:5",
+
+        "set:0,0,0,0",
+        "wait:40",
+        "wait:0",
+        "wait:20",
+        "set:255,0,0,0",
+        "wait:5",
+    ],
+
+    [
+        "wait:0",
+        "wait:40",
+        "wait:0",
+        "wait:20",
+        "wait:0",
+        "wait:5",
+
+        "wait:0",
+        "wait:40",
+        "set:255,255,0,0",
+        "wait:20",
+        "set:0,0,0,0",
+        "wait:5",
+    ],
+    [
+        "wait:0",
+        "wait:40",
+        "wait:0",
+        "wait:20",
+        "wait:0",
+        "wait:5",
+
+        "set:0,255,0,0",
+        "wait:40",
+        "set:0,0,0,0",
+        "wait:20",
+        "wait:0",
+        "wait:5",
+    ],
+    [],
+    [],
+    [
+        "wait:0",
+        "wait:40",
+        "wait:0",
+        "wait:20",
+        "wait:0",
+        "wait:5",
+
+        "set:0,0,0,0",
+        "wait:40",
+        "wait:0",
+        "wait:20",
+        "set:255,0,0,0",
+        "wait:5",
+    ],
+
+    [
+        "wait:0",
+        "wait:40",
+        "wait:0",
+        "wait:20",
+        "wait:0",
+        "wait:5",
+
+        "wait:0",
+        "wait:40",
+        "set:255,255,0,0",
+        "wait:20",
+        "set:0,0,0,0",
+        "wait:5",
+    ],
+    [
+        "wait:0",
+        "wait:40",
+        "wait:0",
+        "wait:20",
+        "wait:0",
+        "wait:5",
+
+        "set:0,255,0,0",
+        "wait:40",
+        "set:0,0,0,0",
+        "wait:20",
+        "wait:0",
+        "wait:5",
+    ],
 ]
 
 
 class LightController:
 
-    def __init__(self, pixel_count: int, ):
+    def __init__(self, pixel_count: int):
         self.pixels = neopixel.NeoPixel_SPI(
             spi=board.SPI(),  # D1
             n=pixel_count,
@@ -177,15 +313,15 @@ class LightController:
         self._temp_instructions = code
         return True
 
-    def set_pixel(self, pixel_id: int, color: tuple[int, int, int, int]):
+    def set_pixel(self, pixel_id: int, color: tuple):
         self.pixels[pixel_id] = color
         self.pixels.show()
         send_update()
 
-    def get_pixel(self, pixel_id: int) -> tuple[int, int, int, int]:
+    def get_pixel(self, pixel_id: int) -> tuple:
         return self.pixels[pixel_id]
 
-    def get_pixels(self) -> list[list[int]]:
+    def get_pixels(self) -> list:
         return [list(a) for a in self.pixels]
 
     def __del__(self):
@@ -285,7 +421,6 @@ def api_loop():
                         +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
                         """
 
-
                         instruction = int(raw_bytes[i])
                         value = int(raw_bytes[i + 1])
 
@@ -294,10 +429,10 @@ def api_loop():
                         col = instruction & 0b00011000
                         pix = instruction & 0b00000111
                         if com == 0:
-                            if col == 0: app.light_controller.update_pixel(pix,red=value)
-                            if col == 1: app.light_controller.update_pixel(pix,green=value)
-                            if col == 2: app.light_controller.update_pixel(pix,blue=value)
-                            if col == 3: app.light_controller.update_pixel(pix,white=value)
+                            if col == 0: app.light_controller.update_pixel(pix, red=value)
+                            if col == 1: app.light_controller.update_pixel(pix, green=value)
+                            if col == 2: app.light_controller.update_pixel(pix, blue=value)
+                            if col == 3: app.light_controller.update_pixel(pix, white=value)
                         if com == 1:
                             app.light_controller.set_brightness(value)
                         if com == 2:
@@ -359,7 +494,7 @@ if __name__ == "__main__":
     with open("users.json") as f:
         for user, pas in json.load(f).items():
             app.auth_tokens.append(hashlib.md5(f"{user}:{pas}".encode()).hexdigest())
-    app.light_controller = LightController(8)
+    app.light_controller = LightController(16)
     app.light_controller.set_code(INITIAL_CONTROL_CODE)
     app.light_controller.start_loop()
 
