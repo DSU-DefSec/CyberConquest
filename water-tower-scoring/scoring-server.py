@@ -90,11 +90,6 @@ def send_update_loop():
         send_update()
 
 
-@app.route("/")
-def hello_world():
-    return render_template("index.html", currentInstruction=json.dumps(get_teams()))
-
-
 @app.route("/scoring")
 def scoring():
     return get_teams()
