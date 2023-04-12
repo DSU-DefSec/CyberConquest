@@ -10,10 +10,10 @@ from time import sleep
 import board
 import digitalio
 
-pump = digitalio.DigitalInOut(board.C7)
+pump = digitalio.DigitalInOut(board.G0)
 pump.direction = digitalio.Direction.OUTPUT
 
-sensor = digitalio.DigitalInOut(board.D4)
+sensor = digitalio.DigitalInOut(board.G1)
 sensor.direction = digitalio.Direction.INPUT
 
 print("Running...")
@@ -23,10 +23,12 @@ while True:
         if sensor.value:
             # print("Pump off")
             pump.value = False
+            #sleep(0.2)
             sleep(5)
         else:
             # print("Pump on")
             pump.value = True
+        #sleep(0.2)
         sleep(2)
     except OSError:
         print("OSError")
