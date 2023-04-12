@@ -68,4 +68,4 @@ while True:
 
     windmill.set_speed(speed)
 
-    sleep(10)
+    sleep(2)
