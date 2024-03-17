@@ -3,9 +3,3 @@ venv/
 
 # PyCharm
 .idea
-
-test*
-exclude/
-DCclient/
-
-buzzzt.exe.*
