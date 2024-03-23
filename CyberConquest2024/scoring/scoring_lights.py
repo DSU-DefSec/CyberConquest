@@ -11,46 +11,21 @@ import time
 from threading import Thread
 
 import board
-import busio
 import digitalio
 import neopixel
-from adafruit_mcp230xx.mcp23008 import MCP23008
 from flask import Flask
 
 PORT = 80
-MCP_COUNT = 2  # 5  # 6
 TICK_CYCLE = 2
 DOWN_AFTER_FAIL = 10
 MAX_SECONDS_BEFORE_GREEN = 10
 MAX_SECONDS_BEFORE_CRANE_CHECK = 10
-MIN_SPACE_BETWEEN_CARS = 30
-NEW_CAR_RAND_CHANCE = 20
-
-MCP_BASE_ID = 0x20
+MIN_SPACE_BETWEEN_CARS = 3
+NEW_CAR_RAND_CHANCE = 2
 
 GLOBAL_PIXEL_LOCK = threading.Lock()
 
 app = Flask(__name__)
-# app.config["SOCK_SERVER_OPTIONS"] = {"ping_interval": 25}
-
-i2c = busio.I2C(board.D3, board.D2)  # (board.SCL, board.SDA)
-mcp_list: list = [MCP23008(i2c, address=MCP_BASE_ID + i) for i in range(MCP_COUNT)]
-
-
-# for m in mcp_list:
-#     for i in range(8):
-
-
-def pin(m: int, p: int) -> digitalio.DigitalInOut:
-    """
-    @param m: mcp_id
-    @param p: pin_id
-    @return: pin
-    """
-    p = mcp_list[m].get_pin(p)
-    p.direction = digitalio.Direction.INPUT
-    p.pull = digitalio.Pull.UP
-    return p
 
 
 def header_pin(slot: int) -> digitalio.DigitalInOut:
@@ -78,20 +53,15 @@ class TrafficLight:
 
 
 @dataclasses.dataclass
-class Team:
+class LightsTeam:
     light1: TrafficLight
     light2: TrafficLight
-    crane_pin: digitalio.DigitalInOut
 
     traffic_down_until: datetime.datetime = datetime.datetime.now()
-    crane_down_until: datetime.datetime = datetime.datetime.now()
-    crane_on_time: datetime.datetime = datetime.datetime.now()
-    crane_off_time: datetime.datetime = datetime.datetime.now()
 
-    def __init__(self, r1_pin, r2_pin, int1, int2, crane):
+    def __init__(self, r1_pin, r2_pin, int1, int2):
         self.light1 = TrafficLight(r1_pin, int1)
         self.light2 = TrafficLight(r2_pin, int2)
-        self.crane_pin = crane
 
     @staticmethod
     def down() -> datetime.datetime:
@@ -100,41 +70,28 @@ class Team:
     def update(self):
         self.light1.update()
         self.light2.update()
-        if self.light1.is_green and self.light1.is_green:
+        if self.light1.is_green and self.light2.is_green:
             self.traffic_down_until = self.down()
         if self.light1.in_violation or self.light2.in_violation:
             self.traffic_down_until = self.down()
 
-        if bool(self.crane_pin.value):
-            self.crane_on_time = datetime.datetime.now()
-        else:
-            self.crane_off_time = datetime.datetime.now()
-
-        if datetime.datetime.now() - self.crane_off_time > datetime.timedelta(seconds=MAX_SECONDS_BEFORE_GREEN):
-            self.crane_down_until = self.down()
-        if datetime.datetime.now() - self.crane_on_time > datetime.timedelta(seconds=MAX_SECONDS_BEFORE_GREEN):
-            self.crane_down_until = self.down()
-
-    def get_status(self) -> tuple[int, int]:
+    def get_status(self) -> bool:
         """
         @return: traffic, crane
         """
         now = datetime.datetime.now()
-        return self.traffic_down_until < now, self.crane_down_until < now
+        return self.traffic_down_until < now
 
 
 teams = {
-    # "1": Team(header_pin(board.D18), header_pin(board.D23), 30, 75, pin(0, 0)),  # T1
-    # "2": Team(pin(0, 2), pin(0, 3), 50, 500, header_pin(board.D1)),  # T2
-    # "3": Team(pin(0, 4), pin(0, 5), 100, 550, header_pin(board.D4)),  # T3
-    "112": Team(pin(0, 1), pin(0, 3), 169, 171, header_pin(board.D5)),  # T4
-    "111": Team(pin(0, 2), pin(0, 5), 139, 141, header_pin(board.D1)),
-    # "4": Team(pin(1, 0), pin(1, 1), 200, 650, header_pin(board.D4)),  # T5
-    # "5": Team(pin(1, 2), pin(1, 3), 250, 700, header_pin(board.D5)),  # T6
-    # "6": Team(pin(1, 4), pin(1, 5), 300, 750, header_pin(board.D6)),  # T7
-    # "7": Team(pin(1, 6), pin(1, 7), 350, 800, header_pin(board.D7)),  # T8
-    # "8: Team(header_pin(board.D10), header_pin(board.D11), 400, 825, header_pin(board.D8)),  # T9
-    # "9": Team(header_pin(board.D12), header_pin(board.D13), 450, 850, header_pin(board.D9)),  # T10
+    "1": LightsTeam(header_pin(board.D16), header_pin(board.D20), 230, 425),
+    "2": LightsTeam(header_pin(board.D26), header_pin(board.D19), 170, 340),
+    "3": LightsTeam(header_pin(board.D0), header_pin(board.D5), 112, 603),
+    "4": LightsTeam(header_pin(board.D6), header_pin(board.D13), 515, 50),
+    "5": LightsTeam(header_pin(board.D11), header_pin(board.D9), 870, 1341),
+    "6": LightsTeam(header_pin(board.D10), header_pin(board.D22), 936, 1435),
+    "7": LightsTeam(header_pin(board.D17), header_pin(board.D27), 1000, 1253),
+    "8": LightsTeam(header_pin(board.D4), header_pin(board.D3), 1175, 1062),
 }
 LIGHTS: list[TrafficLight] = []
 for name, team in teams.items():
@@ -206,8 +163,8 @@ class Cars:
                     c.accel = -0.5 * 3 / (next_border - c.position)
 
                 else:
-                    if c.velocity < 0.2:
-                        c.accel = 0.1
+                    if c.velocity < 0.5:
+                        c.accel = random.random() * 0.1
                     else:
                         c.accel = 0.03
 
@@ -269,16 +226,7 @@ def scoring():
 def score_traffic(team_ip):
     team_num = team_ip.split(".")[2]
     try:
-        return "SCORING" if teams[team_num].get_status()[0] else "DOWN"
-    except KeyError:
-        return "INVALID TEAM"
-
-
-@app.route("/crane://<team_ip>/")
-def score_crane(team_ip):
-    team_num = team_ip.split(".")[2]
-    try:
-        return "SCORING" if teams[team_num].get_status()[1] else "DOWN"
+        return "SCORING" if teams[team_num].get_status() else "DOWN"
     except KeyError:
         return "INVALID TEAM"
 
@@ -287,7 +235,7 @@ if __name__ == "__main__":
     app.send_update_loop_thread = Thread(target=update_loop, daemon=True)
     app.send_update_loop_thread.start()
 
-    app.car_driver = Cars(900)
+    app.car_driver = Cars(1500)
     app.car_driver.start_loop()
 
     app.run(host="0.0.0.0", debug=False, port=PORT)
