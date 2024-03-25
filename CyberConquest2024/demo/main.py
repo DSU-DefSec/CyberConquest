@@ -16,16 +16,13 @@ import neopixel
 from flask import Flask
 
 PORT = 80
-TICK_CYCLE = 2
-DOWN_AFTER_FAIL = 50
-MAX_SECONDS_BEFORE_GREEN = 20
-MAX_SECONDS_BEFORE_CRANE_CHECK = 10
 MIN_SPACE_BETWEEN_CARS = 10
 NEW_CAR_RAND_CHANCE = 2
 
 GLOBAL_PIXEL_LOCK = threading.Lock()
 
 app = Flask(__name__)
+
 
 def header_pin(slot: int) -> digitalio.DigitalInOut:
     p = digitalio.DigitalInOut(slot)
@@ -37,6 +34,8 @@ def header_pin(slot: int) -> digitalio.DigitalInOut:
 @dataclasses.dataclass
 class TrafficLight:
     red_pin: digitalio.DigitalInOut
+    orange_pin: digitalio.DigitalInOut
+    green_pin: digitalio.DigitalInOut
     intersection: int
     is_green: bool = False
     green_time: datetime.datetime = datetime.datetime.now()
@@ -46,56 +45,13 @@ class TrafficLight:
         if self.is_green:
             self.green_time = datetime.datetime.now()
 
-    @property
-    def in_violation(self):
-        return datetime.datetime.now() - self.green_time > datetime.timedelta(seconds=MAX_SECONDS_BEFORE_GREEN)
 
-
-@dataclasses.dataclass
-class LightsTeam:
-    light1: TrafficLight
-    light2: TrafficLight
-
-    traffic_down_until: datetime.datetime = datetime.datetime.now()
-
-    def __init__(self, r1_pin, r2_pin, int1, int2):
-        self.light1 = TrafficLight(r1_pin, int1)
-        self.light2 = TrafficLight(r2_pin, int2)
-
-    @staticmethod
-    def down() -> datetime.datetime:
-        return datetime.datetime.now() + datetime.timedelta(seconds=DOWN_AFTER_FAIL)
-
-    def update(self):
-        self.light1.update()
-        self.light2.update()
-        if self.light1.is_green and self.light2.is_green:
-            self.traffic_down_until = self.down()
-        if self.light1.in_violation or self.light2.in_violation:
-            self.traffic_down_until = self.down()
-
-    def get_status(self) -> bool:
-        """
-        @return: traffic, crane
-        """
-        now = datetime.datetime.now()
-        return self.traffic_down_until < now
-
-
-teams = {
-    "1": LightsTeam(header_pin(board.D16), header_pin(board.D20), 225, 420),
-    "2": LightsTeam(header_pin(board.D26), header_pin(board.D19), 170, 335),
-    "3": LightsTeam(header_pin(board.D0), header_pin(board.D5), 112, 600),
-    "4": LightsTeam(header_pin(board.D6), header_pin(board.D13), 510, 50),
-    "5": LightsTeam(header_pin(board.D11), header_pin(board.D9), 870, 1335),
-    "6": LightsTeam(header_pin(board.D10), header_pin(board.D22), 936, 1430),
-    "7": LightsTeam(header_pin(board.D17), header_pin(board.D27), 1000, 1245),
-    "8": LightsTeam(header_pin(board.D4), header_pin(board.D3), 1175, 1062),
-}
-LIGHTS: list[TrafficLight] = []
-for name, team in teams.items():
-    LIGHTS.append(team.light1)
-    LIGHTS.append(team.light2)
+LIGHTS = [
+    TrafficLight(board.D0, board.D1, board.D2, 100),
+    TrafficLight(board.D3, board.D4, board.D5, 100),
+    TrafficLight(board.D6, board.D7, board.D8, 100),
+    TrafficLight(board.D9, board.D10, board.D11, 100),
+]
 
 
 class Cars:
@@ -106,7 +62,7 @@ class Cars:
         velocity: float = 0
         accel: float = 0
         length: int = 0
-        cid:int = 0
+        cid: int = 0
 
     def __init__(self, pixel_count: int):
         self.pixels = neopixel.NeoPixel(
@@ -136,9 +92,7 @@ class Cars:
         )
         self.total_spawned += 1
         if self.total_spawned % 10 == 0:
-            print(
-                f"[{datetime.datetime.now()}] Cars spawned: {self.total_spawned}"
-            )  # print(f"Spawned car: {self.cars[-1]}")
+            print(f"[{datetime.datetime.now()}] Cars spawned: {self.total_spawned}")
 
     def car_driving_loop(self):
         for i in range(100):
@@ -163,7 +117,10 @@ class Cars:
 
                     if light.intersection + car.length + 2 > car.position >= light.intersection:
                         for car2 in self.cars:
-                            if car.cid != car2.cid and light.intersection + car2.length + 2 > car2.position >= light.intersection:
+                            if (
+                                car.cid != car2.cid
+                                and light.intersection + car2.length + 2 > car2.position >= light.intersection
+                            ):
                                 collide = True
                                 to_del.append(car)
                                 print(f"{car.cid} <> {car2.cid}")
@@ -177,8 +134,6 @@ class Cars:
                                 #         self.pixels[p] = (0,255,0)
                                 # self.pixels.show()
                                 # # time.sleep(0.2)
-
-
 
                     if car.position >= light.intersection:
                         continue
@@ -204,7 +159,7 @@ class Cars:
                 body = [(255, 255, 255)] + [car.color] * car.length + [(255, 0, 0)]
                 for s in body:
                     if 0 <= pos < len(self.pixels):
-                        self.pixels[pos] = s if not collide else (255,0,0)
+                        self.pixels[pos] = s if not collide else (255, 0, 0)
                     pos -= 1
                 next_border = pos
 
@@ -242,8 +197,6 @@ def update_loop():
     cycle = 1
     while True:
         time.sleep(max(0, last - time.time() + cycle))
-        for name, team in teams.items():
-            team.update()
         last = time.time()
 
 
