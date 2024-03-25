@@ -3,11 +3,9 @@
 # @Project: CyberConquest/CyberConquest2024/demo
 # @Author: Goofables
 # @Created: 2024-03-25
-
 import random
 
 from adafruit_motorkit import MotorKit
-
 
 class MotorController:
     def __init__(self):
