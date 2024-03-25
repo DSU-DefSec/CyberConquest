@@ -17,16 +17,15 @@ from flask import Flask
 
 PORT = 80
 TICK_CYCLE = 2
-DOWN_AFTER_FAIL = 10
-MAX_SECONDS_BEFORE_GREEN = 10
+DOWN_AFTER_FAIL = 50
+MAX_SECONDS_BEFORE_GREEN = 20
 MAX_SECONDS_BEFORE_CRANE_CHECK = 10
-MIN_SPACE_BETWEEN_CARS = 3
+MIN_SPACE_BETWEEN_CARS = 10
 NEW_CAR_RAND_CHANCE = 2
 
 GLOBAL_PIXEL_LOCK = threading.Lock()
 
 app = Flask(__name__)
-
 
 def header_pin(slot: int) -> digitalio.DigitalInOut:
     p = digitalio.DigitalInOut(slot)
@@ -84,13 +83,13 @@ class LightsTeam:
 
 
 teams = {
-    "1": LightsTeam(header_pin(board.D16), header_pin(board.D20), 230, 425),
-    "2": LightsTeam(header_pin(board.D26), header_pin(board.D19), 170, 340),
-    "3": LightsTeam(header_pin(board.D0), header_pin(board.D5), 112, 603),
-    "4": LightsTeam(header_pin(board.D6), header_pin(board.D13), 515, 50),
-    "5": LightsTeam(header_pin(board.D11), header_pin(board.D9), 870, 1341),
-    "6": LightsTeam(header_pin(board.D10), header_pin(board.D22), 936, 1435),
-    "7": LightsTeam(header_pin(board.D17), header_pin(board.D27), 1000, 1253),
+    "1": LightsTeam(header_pin(board.D16), header_pin(board.D20), 225, 420),
+    "2": LightsTeam(header_pin(board.D26), header_pin(board.D19), 170, 335),
+    "3": LightsTeam(header_pin(board.D0), header_pin(board.D5), 112, 600),
+    "4": LightsTeam(header_pin(board.D6), header_pin(board.D13), 510, 50),
+    "5": LightsTeam(header_pin(board.D11), header_pin(board.D9), 870, 1335),
+    "6": LightsTeam(header_pin(board.D10), header_pin(board.D22), 936, 1430),
+    "7": LightsTeam(header_pin(board.D17), header_pin(board.D27), 1000, 1245),
     "8": LightsTeam(header_pin(board.D4), header_pin(board.D3), 1175, 1062),
 }
 LIGHTS: list[TrafficLight] = []
@@ -107,6 +106,7 @@ class Cars:
         velocity: float = 0
         accel: float = 0
         length: int = 0
+        cid:int = 0
 
     def __init__(self, pixel_count: int):
         self.pixels = neopixel.NeoPixel(
@@ -123,69 +123,99 @@ class Cars:
         self.total_spawned = 0
         self.loop_thread = None
 
+    def newcar(self, pos: int = 0):
+        self.cars.append(
+            Cars.Car(
+                color=(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)),
+                velocity=0.1,
+                accel=0.01,
+                length=random.randint(0, 2),
+                position=pos,
+                cid=self.total_spawned,
+            )
+        )
+        self.total_spawned += 1
+        if self.total_spawned % 10 == 0:
+            print(
+                f"[{datetime.datetime.now()}] Cars spawned: {self.total_spawned}"
+            )  # print(f"Spawned car: {self.cars[-1]}")
+
     def car_driving_loop(self):
+        for i in range(100):
+            self.newcar(1500 - i * 50)
         while self.active:
             if (
                 len(self.cars) == 0
                 or self.cars[-1].position > MIN_SPACE_BETWEEN_CARS
                 and random.randint(1, NEW_CAR_RAND_CHANCE) == 1
             ):
-                self.cars.append(
-                    Cars.Car(
-                        color=(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)),
-                        velocity=0.1,
-                        accel=0.01,
-                        length=random.randint(0, 2),
-                    )
-                )
-                self.total_spawned += 1
-                if self.total_spawned % 10 == 0:
-                    print(
-                        f"[{datetime.datetime.now()}] Cars spawned: {self.total_spawned}"
-                    )  # print(f"Spawned car: {self.cars[-1]}")
+                self.newcar()
             with GLOBAL_PIXEL_LOCK:
                 self.pixels.fill(0)
             next_border = -1
             to_del = []
-            for c in self.cars:
+            for car in self.cars:
                 next_is_car = False
-
+                collide = False
                 for light in LIGHTS:
                     if light.is_green:
                         continue
-                    if c.position >= light.intersection:
+
+                    if light.intersection + car.length + 2 > car.position >= light.intersection:
+                        for car2 in self.cars:
+                            if car.cid != car2.cid and light.intersection + car2.length + 2 > car2.position >= light.intersection:
+                                collide = True
+                                to_del.append(car)
+                                print(f"{car.cid} <> {car2.cid}")
+                                # with GLOBAL_PIXEL_LOCK:
+                                #    for p in range(int(car.position - car.length * 2), int(car.position + car.length)):
+                                #         self.pixels[p] = (255,0,0)
+                                # self.pixels.show()
+                                # # time.sleep(0.2)
+                                # with GLOBAL_PIXEL_LOCK:
+                                #    for p in range(int(car.position - car.length * 2), int(car.position + car.length)):
+                                #         self.pixels[p] = (0,255,0)
+                                # self.pixels.show()
+                                # # time.sleep(0.2)
+
+
+
+                    if car.position >= light.intersection:
                         continue
 
-                    if c.position < light.intersection < next_border:
+                    if car.position < light.intersection < next_border:
                         next_border = light.intersection
 
-                if 0 < next_border - c.position < 2:
-                    c.accel = -0.5 * 3 / (next_border - c.position)
+                if 0 < next_border - car.position < 2:
+                    car.accel = -0.5 * 3 / (next_border - car.position)
 
                 else:
-                    if c.velocity < 0.5:
-                        c.accel = random.random() * 0.1
+                    if car.velocity < 0.5:
+                        car.accel = random.random() * 0.1
                     else:
-                        c.accel = 0.03
+                        car.accel = 0.03
 
-                    c.accel *= 0.9**c.length
+                    car.accel *= 0.9**car.length
 
-                c.position += c.velocity
-                c.velocity = min(max(c.velocity + c.accel, 0), 1)
+                car.position += car.velocity
+                car.velocity = min(max(car.velocity + car.accel, 0), 1)
 
-                pos = int(c.position)
-                body = [(255, 255, 255)] + [c.color] * c.length + [(255, 0, 0)]
+                pos = int(car.position)
+                body = [(255, 255, 255)] + [car.color] * car.length + [(255, 0, 0)]
                 for s in body:
                     if 0 <= pos < len(self.pixels):
-                        self.pixels[pos] = s
+                        self.pixels[pos] = s if not collide else (255,0,0)
                     pos -= 1
                 next_border = pos
 
                 if pos > len(self.pixels):
-                    to_del.append(c)
+                    to_del.append(car)
 
             for c in to_del:
-                self.cars.remove(c)
+                try:
+                    self.cars.remove(c)
+                except:
+                    pass
 
             with GLOBAL_PIXEL_LOCK:
                 try:
