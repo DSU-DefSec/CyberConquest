@@ -10,7 +10,7 @@ from threading import Thread
 import digitalio
 from flask import Flask, render_template
 
-import lights
+import traffic_control
 
 PORT = 80
 MIN_SPACE_BETWEEN_CARS = 10
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     app.send_update_loop_thread.start()
 
     # Initialize cars and start the controll loop
-    app.car_driver = lights.Cars(PIXEL_COUNT)
+    app.car_driver = traffic_control.Cars(PIXEL_COUNT)
     app.car_driver.start_loop()
 
     # Run webapp forever

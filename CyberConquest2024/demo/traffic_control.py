@@ -17,7 +17,9 @@ import neopixel
 
 PORT = 80
 MIN_SPACE_BETWEEN_CARS = 10
-NEW_CAR_RAND_CHANCE = 2
+CAR_SPAWN_CHANCE = 0.5
+MIN_CAR_LENGTH = 0
+MAX_CAR_LENGTH = 3
 
 GLOBAL_PIXEL_LOCK = threading.Lock()
 
@@ -48,12 +50,21 @@ class TrafficLight:
 
     def green(self) -> None:
         """Set traffic light to green"""
+        self.red = False
+        self.yellow_pin = False
+        self.green_pin = True
 
     def yellow(self) -> None:
         """Set traffic light to yellow"""
+        self.red = False
+        self.yellow_pin = True
+        self.green_pin = False
 
     def red(self) -> None:
         """Set traffic light to red"""
+        self.red = True
+        self.yellow_pin = False
+        self.green_pin = False
 
 
 LIGHTS = [
@@ -83,6 +94,45 @@ class Cars:
         accel: float = 0
         length: int = 0
         cid: int = 0
+
+        def change_acc(self, next_obstacle: int):
+            """
+            Change car's acceleration based on where it is from the next obstacle.
+            @param next_obstacle: the closest obstacle
+            """
+        # set car to break if we are close to the next intersection
+            if 0 < next_obstacle - self.position < 2:
+                self.accel = -0.5 * 3 / (next_obstacle - self.position)
+            else:
+                # Car is not near next intersection
+                if self.velocity < 0.5:
+                    # Car is slow, so accelerate quickly
+                    self.accel = random.random() * 0.1
+                else:
+                    # Car is fast so accelerate quickly
+                    self.accel = 0.03
+
+                # Slow car acceleration based on length of car
+                self.accel *= 0.9**self.length
+
+        def move_car(self, collide: bool):
+            """
+            Changes the pixels of the body to move the car along the track.
+            @param collide: has the car collided
+            """
+            self.position += self.velocity
+                # Update car velocity
+            self.velocity = min(max(self.velocity + self.accel, 0), 1)
+
+            pos = int(self.position)
+            # Get the pixel colors for the car (white, color * length, red)
+            body = [(255, 255, 255)] + [self.color] * self.length + [(255, 0, 0)]
+            for pixel in body:
+                # Only set car pixel if it is within the pixels. Prevent out of bounds error
+                if 0 <= pos < len(self.pixels):
+                    self.pixels[pos] = pixel if not collide else (255, 0, 0)
+                pos -= 1
+            return pos
 
     def __init__(self, pixel_count: int):
         """
@@ -114,7 +164,7 @@ class Cars:
                 color=(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)),
                 velocity=0.1,
                 accel=0.01,
-                length=random.randint(0, 2),
+                length=random.randint(MIN_CAR_LENGTH, MAX_CAR_LENGTH),
                 position=pos,
                 cid=self.total_spawned,
             )
@@ -129,13 +179,13 @@ class Cars:
             if (
                 len(self.cars) == 0
                 or self.cars[-1].position > MIN_SPACE_BETWEEN_CARS
-                and random.randint(1, NEW_CAR_RAND_CHANCE) == 1
+                and random.random() < CAR_SPAWN_CHANCE
             ):
                 self.new_car()
             with GLOBAL_PIXEL_LOCK:
                 self.pixels.fill(0)
             # Next border that a car could run into
-            next_border = -1
+            next_obstacle = -1
             to_del = []
             for car in self.cars:
                 collide = False
@@ -161,42 +211,16 @@ class Cars:
                         continue
 
                     # Set the light as the next border if it is closer than the previous one
-                    if car.position < light.intersection < next_border:
-                        next_border = light.intersection
+                    if car.position < light.intersection < next_obstacle:
+                        next_obstacle = light.intersection
 
-                # Car speed management should probably be moved to Car class
-
-                # set car to break if we are close to the next intersection
-                if 0 < next_border - car.position < 2:
-                    car.accel = -0.5 * 3 / (next_border - car.position)
-                else:
-                    # Car is not near next intersection
-                    if car.velocity < 0.5:
-                        # Car is slow, so accelerate quickly
-                        car.accel = random.random() * 0.1
-                    else:
-                        # Car is fast so accelerate quickly
-                        car.accel = 0.03
-
-                    # Slow car acceleration based on length of car
-                    car.accel *= 0.9**car.length
+                # change car's acceleration based on the next obstacle
+                car.change_acc(next_obstacle)
 
                 # Move the car
-                car.position += car.velocity
-                # Update car velocity
-                car.velocity = min(max(car.velocity + car.accel, 0), 1)
-
-                pos = int(car.position)
-                # Get the pixel colors for the car (white, color * length, red)
-                body = [(255, 255, 255)] + [car.color] * car.length + [(255, 0, 0)]
-                for s in body:
-                    # Only set car pixel if it is within the pixels. Prevent out of bounds error
-                    if 0 <= pos < len(self.pixels):
-                        self.pixels[pos] = s if not collide else (255, 0, 0)
-                    pos -= 1
-
                 # Update next border to be this car so the next car knows that is farthest forward point it can be
-                next_border = pos
+                pos = car.move_car(collide)
+                next_obstacle = pos
 
                 # Set car to be deleted if the end of it is off the strip of pixels
                 if pos > len(self.pixels):

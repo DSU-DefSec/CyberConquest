@@ -10,13 +10,14 @@ from adafruit_motorkit import MotorKit
 class MotorController:
     def __init__(self):
         self.kit = MotorKit()
+        self.probability = 0.5
 
     def set_random_speed(self):
         r = random.random()
         motor = random.choice([self.kit.motor1, self.kit.motor2, self.kit.motor3, self.kit.motor4])
-        if r < 0.5:
+        if r < self.probability:
             if motor.throttle == 0:
-                if random.random() < 0.5:
+                if random.random() < self.probability:
                     motor.throttle = 1
                 else:
                     motor.throttle = -1

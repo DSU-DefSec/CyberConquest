@@ -3,7 +3,6 @@
 # @Project: CyberConquest/CyberConquest2024/demo
 # @Author: Goofables
 # @Created: 2024-03-25
-
 import time
 import os
 
@@ -25,7 +24,7 @@ pin2 = digitalio.DigitalInOut(board.G2)
 pin2.direction = digitalio.Direction.OUTPUT
 
 state = False
-bstate = False
+button_state = False
 
 # When switch triggered, flip crane reel direction
 def crane_d1():
@@ -45,18 +44,17 @@ def crane_stop():
     time.sleep(0.5)
 
 def tick():
-    global state, bstate
+    global state, button_state
     if state:
         crane_d1()
     else:
         crane_d2()
 
-    if pin.value != bstate:
-        bstate = pin.value
-        if not bstate:
+    if pin.value != button_state:
+        button_state = pin.value
+        if not button_state:
             state = not state
             crane_stop()
-            time.sleep(0.1)
 
 def print_pin_state():
     print(f"Pin: {pin.value}")
@@ -65,6 +63,7 @@ def main():
     try:
         while True:
             tick()
+            time.sleep(0.1)
             # x = input("tick or pin\n>")
             # if x == "tick":
             #     tick()
