@@ -1,3 +1,4 @@
 adafruit-circuitpython-motorkit
 adafruit-circuitpython-neopixel
+adafruit-circuitpython-is31fl3741
 flask

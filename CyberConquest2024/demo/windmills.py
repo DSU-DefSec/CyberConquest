@@ -4,8 +4,15 @@
 # @Author: Goofables
 # @Created: 2024-03-25
 import random
+import time
 
 from adafruit_motorkit import MotorKit
+
+
+class Windmills:
+    def __init__(self):
+        self.kit = MotorKit()
+
 
 class MotorController:
     def __init__(self):
@@ -25,3 +32,10 @@ class MotorController:
                 motor.throttle = 0
         else:
             motor.throttle = 0
+
+
+if __name__ == "__main__":
+    mc = MotorController()
+    while True:
+        mc.set_random_speed()
+        time.sleep(1)

@@ -7,6 +7,7 @@ import threading
 import time
 from threading import Thread
 
+import board
 import digitalio
 from flask import Flask, render_template
 
@@ -21,6 +22,48 @@ PIXEL_COUNT = 300
 GLOBAL_PIXEL_LOCK = threading.Lock()
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
+
+CRANE_PORTS = [
+    (board.D8, board.D7),  # 0,111111111111111
+    (board.D20, board.D21),  # 2,3
+    (board.D12, board.D1),  # 4,5 # 1 maybe reserved
+    (board.D16, board.D25),  # 6,7
+]
+
+# ROAD = board.D4
+TRAFFIC_LIGHTS = (
+    traffic_control.light_factory(
+        board.D26,
+        board.D13,
+        board.D19,
+        [
+            (98, 100),
+            (198, 200),
+        ],
+    )
+    + traffic_control.light_factory(
+        board.D5,
+        board.D0,
+        board.D6,
+        [
+            (48, 50),
+            (148, 150),
+        ],
+    ),
+)
+
+
+# WINDMILLS = [
+#     0,  # motor1
+#     1,  # motor2
+#     2,  # motor3
+#     3,  # motor4
+# ]
+
+# CLOCK = [
+#     board.D2,  # SDA
+#     board.D3,  # SCL
+# ]
 
 
 def header_pin(slot: int) -> digitalio.DigitalInOut:

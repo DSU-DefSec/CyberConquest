@@ -9,6 +9,7 @@ import datetime
 import enum
 import random
 import threading
+import time
 from threading import Thread
 
 import board
@@ -48,30 +49,67 @@ class TrafficLight:
     # Current light color
     color: TrafficLightColor = None
 
+    def __post_init__(self):
+        self.red_pin = digitalio.DigitalInOut(self.red_pin)
+        self.red_pin.direction = digitalio.Direction.OUTPUT
+        self.yellow_pin = digitalio.DigitalInOut(self.yellow_pin)
+        self.yellow_pin.direction = digitalio.Direction.OUTPUT
+        self.green_pin = digitalio.DigitalInOut(self.green_pin)
+        self.green_pin.direction = digitalio.Direction.OUTPUT
+
     def green(self) -> None:
         """Set traffic light to green"""
-        self.red = False
-        self.yellow_pin = False
-        self.green_pin = True
+        self.red_pin.value = False
+        self.yellow_pin.value = False
+        self.green_pin.value = True
+        self.color = TrafficLightColor.GREEN
 
     def yellow(self) -> None:
         """Set traffic light to yellow"""
-        self.red = False
-        self.yellow_pin = True
-        self.green_pin = False
+        self.red_pin.value = False
+        self.yellow_pin.value = True
+        self.green_pin.value = False
+        self.color = TrafficLightColor.YELLOW
 
     def red(self) -> None:
         """Set traffic light to red"""
-        self.red = True
-        self.yellow_pin = False
-        self.green_pin = False
+        self.red_pin.value = True
+        self.yellow_pin.value = False
+        self.green_pin.value = False
+        self.color = TrafficLightColor.RED
+
+
+def light_generator(
+    red_pin,
+    yellow_pin,
+    green_pin,
+):
+    pass
+
+
+def light_factory(red_pin, yellow_pin, green_pin, intersections: list[tuple[int, int]]):
+    """
+    Create list of traffic lights with the same control pins.
+
+    @param red_pin: Pin id of the red pin
+    @param yellow_pin: Pin id of the yellow pin
+    @param green_pin: Pin id of the green pin
+    @param intersections: List of intersection tuples in the form (line, intersection)
+    @return:
+    """
+    red_pin = digitalio.DigitalInOut(red_pin)
+    red_pin.direction = digitalio.Direction.OUTPUT
+    yellow_pin = digitalio.DigitalInOut(yellow_pin)
+    yellow_pin.direction = digitalio.Direction.OUTPUT
+    green_pin = digitalio.DigitalInOut(green_pin)
+    green_pin.direction = digitalio.Direction.OUTPUT
+
+    return [TrafficLight(red_pin, yellow_pin, green_pin, line=i[0], intersection=i[1]) for i in intersections]
 
 
 LIGHTS = [
-    TrafficLight(board.D0, board.D1, board.D2, 100),
-    TrafficLight(board.D3, board.D4, board.D5, 100),
-    TrafficLight(board.D6, board.D7, board.D8, 100),
-    TrafficLight(board.D9, board.D10, board.D11, 100),
+    TrafficLight(board.D26, board.D13, board.D19, 100),
+    TrafficLight(board.D5, board.D0, board.D6, 100),
 ]
 
 
@@ -100,7 +138,7 @@ class Cars:
             Change car's acceleration based on where it is from the next obstacle.
             @param next_obstacle: the closest obstacle
             """
-        # set car to break if we are close to the next intersection
+            # set car to break if we are close to the next intersection
             if 0 < next_obstacle - self.position < 2:
                 self.accel = -0.5 * 3 / (next_obstacle - self.position)
             else:
@@ -121,7 +159,7 @@ class Cars:
             @param collide: has the car collided
             """
             self.position += self.velocity
-                # Update car velocity
+            # Update car velocity
             self.velocity = min(max(self.velocity + self.accel, 0), 1)
 
             pos = int(self.position)
@@ -134,13 +172,13 @@ class Cars:
                 pos -= 1
             return pos
 
-    def __init__(self, pixel_count: int):
+    def __init__(self, strip_pin, pixel_count: int):
         """
         Setup the car controller
         @param pixel_count: Number of pixels in the neopixel strip
         """
         self.pixels = neopixel.NeoPixel(
-            board.D21,  # D1
+            strip_pin,
             n=pixel_count,
             bpp=3,  # Bits per pixel. Always 3 with neopixel strip
             pixel_order=neopixel.GRB,  # GRB color scheme
@@ -252,3 +290,18 @@ class Cars:
     def set_brightness(self, brightness: int):
         """Set brightness of the whole strip"""
         self.pixels.brightness = brightness / 100
+
+
+if __name__ == "__main__":
+    tc = Cars(board.D4, 300)
+    while True:
+        for l in LIGHTS:
+            l.green_pin.value = True
+            l.yellow_pin.value = True
+            l.red_pin.value = True
+        time.sleep(5)
+        for l in LIGHTS:
+            l.green_pin.value = False
+            l.yellow_pin.value = False
+            l.red_pin.value = False
+        time.sleep(1)
