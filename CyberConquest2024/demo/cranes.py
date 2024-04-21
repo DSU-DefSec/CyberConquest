@@ -5,29 +5,11 @@
 # @Created: 2024-03-25
 import dataclasses
 import time
-import os
 
 import board
 import digitalio
 
-#
-# # top relay
-# pin = digitalio.DigitalInOut(board.G0)
-# pin.direction = digitalio.Direction.INPUT
-#
-# # bottom relay
-# pin1 = digitalio.DigitalInOut(board.G1)
-# pin1.direction = digitalio.Direction.OUTPUT
-#
-# # switch detector
-# pin2 = digitalio.DigitalInOut(board.G2)
-# pin2.direction = digitalio.Direction.OUTPUT
 
-# state = False
-# button_state = False
-
-
-# Please don't laugh at my code.
 @dataclasses.dataclass
 class Crane:
     direction: bool
@@ -37,6 +19,12 @@ class Crane:
     switch_pin: digitalio.DigitalInOut
 
     def __init__(self, relay_1_pin, relay_2_pin, switch_pin):
+        """
+        Set up the pins used by the cranes.
+        @param relay_1_pin: Pin for the first relay.
+        @param relay_2_pin: Pin for the second relay.
+        @param switch_pin: Pin for the limit switch.
+        """
         self.relay_1_pin = digitalio.DigitalInOut(relay_1_pin)
         self.relay_1_pin.direction = digitalio.Direction.OUTPUT
 
@@ -50,55 +38,62 @@ class Crane:
         self.direction = False
         self.button_state = False
 
-    def crane_dir_1(self):
+        self.freeze_time = None
+        self.last_run = None
+
+    def crane_dir_1(self) -> None:
+        """Direction one"""
         self.relay_1_pin.value = True
         self.relay_2_pin.value = False
 
-    def crane_dir_2(self):
+    def crane_dir_2(self) -> None:
+        """Direction two"""
         self.relay_1_pin.value = False
         self.relay_2_pin.value = True
 
-    def crane_stop(self):
+    def crane_stop(self) -> None:
+        """Stop the crane"""
         self.relay_1_pin.value = False
         self.relay_2_pin.value = False
-        time.sleep(0.5)
+        self.freeze_time = time.time() + 0.2
 
     def tick(self):
-        if self.direction:
-            self.crane_dir_1()
+        """Tick the cranes. Must be run at least every 0.1 seconds or cranes may crash"""
+        if self.last_run is not None:
+            assert time.time() - self.last_run > 0.1
+        self.last_run = time.time()
+
+        if self.freeze_time is None:
+            if self.direction:
+                self.crane_dir_1()
+            else:
+                self.crane_dir_2()
         else:
-            self.crane_dir_2()
+            if self.freeze_time < time.time():
+                self.freeze_time = None
 
-        # If on the tick the switch if pressed,
+        # If switch is in a different state than the last run
         if self.switch_pin.value != self.button_state:
-            # remember the current button state,
-            self.button_state = self.switch_pin.value
+            # Toggle the last state remembered to match the current state
+            self.button_state = not self.button_state
 
-            # and if the button is not pressed at all,s
-            if not self.button_state:
-                # switch the direction and stop the crane.
+            # If the current state of the switch is grounded (pressed)
+            if self.button_state is False:
+                # Stop the crane and toggle the direction
                 self.direction = not self.direction
                 self.crane_stop()
 
-
-crane_1 = Crane(board.G1, board.G2, board.G0)
-
-
-def main():
-    try:
-        while True:
-            crane_1.tick()
-            time.sleep(0.1)
-            # x = input("tick or pin\n>")
-            # if x == "tick":
-            #     tick()
-            # elif x == "pin":
-            #     print_pin_state()
-            # else:
-            #     print("invalid input")
-    except KeyboardInterrupt:
-        crane_1.crane_stop()
+    def __del__(self):
+        self.crane_stop()
 
 
 if __name__ == "__main__":
-    main()
+    cranes = [
+        Crane(board.G1, board.G2, board.G0),  # Crane(board.G1, board.G2, board.G0),
+        # Crane(board.G1, board.G2, board.G0),
+        # Crane(board.G1, board.G2, board.G0),
+    ]
+    while True:
+        for c in cranes:
+            c.tick()
+        time.sleep(0.1)
